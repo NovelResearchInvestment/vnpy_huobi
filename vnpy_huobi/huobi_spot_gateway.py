@@ -159,6 +159,7 @@ class HuobiSpotRestApi(RestClient):
 
         self.gateway: HuobiSpotGateway = gateway
         self.gateway_name: str = gateway.gateway_name
+        self.is_connected: bool = False
 
         self.host: str = ""
         self.key: str = ""
@@ -205,11 +206,13 @@ class HuobiSpotRestApi(RestClient):
         self.init(REST_HOST, proxy_host, proxy_port)
         self.start()
 
-        self.gateway.write_log("REST API启动成功")
+        self.gateway.write_log(f"{self.gateway_name}  REST API启动成功")
 
         self.query_contract()
         self.query_account()
         self.query_order()
+        self.is_connected = True
+        self.gateway.write_log(f"{self.gateway_name} REST API启动成功")
 
     def query_account(self) -> None:
         """查询资金"""
@@ -375,7 +378,7 @@ class HuobiSpotRestApi(RestClient):
 
             self.gateway.on_order(order)
 
-        self.gateway.write_log("委托信息查询成功")
+        self.gateway.write_log(f"{self.gateway_name}  委托信息查询成功")
 
     def on_query_contract(self, data: dict, request: Request) -> None:
         """合约信息查询回报"""
@@ -405,7 +408,7 @@ class HuobiSpotRestApi(RestClient):
 
             symbol_contract_map[contract.symbol] = contract
 
-        self.gateway.write_log("合约信息查询成功")
+        self.gateway.write_log(f"{self.gateway_name}  合约信息查询成功")
 
     def on_send_order(self, data: dict, request: Request) -> None:
         """委托下单回报"""
@@ -479,7 +482,10 @@ class HuobiSpotTradeWebsocketApi(HuobiWebsocketApiBase):
     def __init__(self, gateway: HuobiSpotGateway):
         """构造函数"""
         super().__init__(gateway)
-
+        self.gateway: HuobiSpotGateway = gateway
+        self.gateway_name = gateway.gateway_name
+        self.is_connected: bool = False
+        
     def connect(
         self,
         key: str,
@@ -512,13 +518,14 @@ class HuobiSpotTradeWebsocketApi(HuobiWebsocketApiBase):
 
     def on_connected(self) -> None:
         """连接成功回报"""
-        self.gateway.write_log("交易Websocket API连接成功")
+        self.gateway.write_log(f"{self.gateway_name}  交易Websocket API连接成功")
         self.login(v2=True)
+        self.is_connected = True
 
     def on_login(self, packet: dict) -> None:
         """登录成功回报"""
         if "data" in packet and not packet["data"]:
-            self.gateway.write_log("交易Websocket API登录成功")
+            self.gateway.write_log(f"{self.gateway_name}  交易Websocket API登录成功")
 
             self.subscribe_topic()
         else:
@@ -614,7 +621,8 @@ class HuobiSpotDataWebsocketApi(HuobiWebsocketApiBase):
 
         self.ticks: Dict[str, TickData] = {}
         self.subscribed: Dict[str, SubscribeRequest] = {}
-
+        self.is_connected: bool = False
+        
     def connect(
         self,
         key: str,
@@ -633,7 +641,8 @@ class HuobiSpotDataWebsocketApi(HuobiWebsocketApiBase):
 
     def on_connected(self) -> None:
         """连接成功回报"""
-        self.gateway.write_log("行情Websocket API连接成功")
+        self.gateway.write_log(f"{self.gateway_name}  行情Websocket API连接成功")
+        self.is_connected = True
 
         for req in list(self.subscribed.values()):
             self.subscribe(req)
